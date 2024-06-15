@@ -12,7 +12,7 @@
   },
   "scripts": {
     "devStart": "nodemon server.js",
-    "build": "parcel build index.js"
+    "build": "parcel build server.js"
   },
   "keywords": [],
   "author": "",
