@@ -1,9 +1,18 @@
 {
   "name": "airgain_pos_calculation",
   "version": "1.0.0",
-  "main": "sales.js",
+  "engines": {
+    "node": ">=22.2.0"
+  },
+  "main": "dist/index.js",
+  "targets": {
+    "main": {
+      "includeNodeModules": true
+    }
+  },
   "scripts": {
-    "devStart": "nodemon server.js"
+    "devStart": "nodemon server.js",
+    "build": "parcel build index.js"
   },
   "keywords": [],
   "author": "",
