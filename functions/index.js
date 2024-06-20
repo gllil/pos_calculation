@@ -4,21 +4,23 @@ require("dotenv").config();
 
 const express = require("express");
 const app = express();
+const currentDate = new Date();
 
 app.use(express.json());
 
-function grabYear(date) {
-  return date.split("-")[0];
+function grabYear(d) {
+  const date = new Date(d);
+  return date.getFullYear();
 }
 
 async function updateAccount(id, data) {
   const updateYearPosSales = await fetch(
-    "https://stage.impartner.live/api/objects/v1/Account/" + id,
+    "https://prod.impartner.live/api/objects/v1/Account/" + id,
     {
       method: "PATCH",
       headers: {
         "X-PRM-TenantId": 864,
-        Authorization: "prm-key " + process.env.API_KEY,
+        Authorization: "prm-key " + process.env.PROD_API,
         "Content-Type": "application/json",
       },
       body: JSON.stringify(data),
@@ -31,21 +33,23 @@ async function updateAccount(id, data) {
 app.post("/", async (req, res) => {
   const id = req.body.id;
   const costByYear = { Id: id, PartnerLevel: 0, name: "" };
-
+  const query = `fields=SourceAccount.PartnerLevel%2CSourceAccount.Name%2CSourceAccount%2CInvoiceDate%2CReseller_Extended_Cost__cf&filter=InvoiceDate%3E%22${(
+    currentDate.getFullYear() - 1
+  ).toString()}-12-31T00%3A00%3A00%22%20and%20SourceAccount.Id%20%3D%20${id}&take=1000`;
   const response = await fetch(
-    `https://stage.impartner.live/api/objects/v1/Sale?fields=SourceAccount.PartnerLevel%2CSourceAccount.Name%2CSourceAccount%2CInvoiceDate%2CReseller_Extended_Cost__cf&filter=SourceAccount.Id%20%3D%20${id}&take=1000`,
+    `https://prod.impartner.live/api/objects/v1/Sale?${query}`,
     {
       method: "GET",
       headers: {
         "X-PRM-TenantId": 864,
-        Authorization: "prm-key " + process.env.API_KEY,
+        Authorization: "prm-key " + process.env.PROD_API,
       },
     }
   );
+
   if (response.ok) {
     const results = await response.json();
     const sales = results.data.results;
-
     await sales.forEach((sale) => {
       const { invoiceDate, reseller_Extended_Cost__cf } = sale;
 
@@ -59,15 +63,17 @@ app.post("/", async (req, res) => {
       costByYear[`POS_${grabYear(invoiceDate)}__cf`] +=
         reseller_Extended_Cost__cf;
     });
-    log(costByYear);
     await updateAccount(id, costByYear).then((r) => {
       log(r);
       res.send(r);
     });
   } else {
     log(response.statusText);
-    res.send("response status" + response.statusText);
+    res.send("response status " + response.statusText);
   }
 });
 
-exports.updateCalculation = onRequest(app);
+//Using one below for stage only
+// exports.updateCalculation = onRequest(app);
+
+exports.prodUpdateCalculation = onRequest({ secrets: ["PROD_API"] }, app);
